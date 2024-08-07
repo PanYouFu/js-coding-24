@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Program",
+      "type": "pwa-node",
+      "request": "launch",
+      "program": "${workspaceFolder}/undefinedToNul.js",
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    },
+    {
+      "name": "Launch Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/undefinedToNul.js"
+    },
+    {
+      "name": "Run TypeScript File",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/*.ts",
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "sourceMaps": true
+    }
+  ]
+}
