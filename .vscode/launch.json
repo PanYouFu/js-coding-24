@@ -7,7 +7,9 @@
       "request": "launch",
       "program": "${workspaceFolder}/undefinedToNul.js",
       "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ]
     },
     {
       "name": "Launch Chrome",
@@ -20,10 +22,25 @@
       "name": "Run TypeScript File",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/*.ts",
+      "program": "${file}",
       "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": ["${workspaceFolder}/**/*.js"],
+      "outFiles": [
+        "${workspaceFolder}/**/*.js"
+      ],
       "sourceMaps": true
+    },
+    {
+      "name": "Attach to Node.js",
+      "type": "node",
+      "request": "attach",
+      "port": 9229, // 默认的 Node.js 调试端口
+      "restart": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ]
     }
-  ]
+  ],
 }
