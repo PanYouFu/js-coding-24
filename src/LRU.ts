@@ -21,12 +21,12 @@ interface LRUStorage {
 // 移除策略：移除最近最少使用的（也就是时间戳最早的）数据。
 class MyLRUStorage implements LRUStorage {
   capacity: number
-  getTimestamp: () => void
+  getTimestamp: (() => void) | undefined
 
   map: Map<string, OriginData>
   totalSize: number
 
-  constructor(capacity: number, getTimestamp: () => void) {
+  constructor(capacity: number, getTimestamp?: () => void) {
     this.capacity = capacity
     this.getTimestamp = getTimestamp
 
@@ -41,7 +41,8 @@ class MyLRUStorage implements LRUStorage {
 
     if (data) {
       data.lastUsed = Date.now()
-      data && this.map.set(origin, data)
+      this.map.delete(origin)
+      this.map.set(origin, data)
 
       return data
     } else {
@@ -54,20 +55,25 @@ class MyLRUStorage implements LRUStorage {
   // If the total size exceeds capacity,
   // Least Recently Used non-persistent origin data other than itself should be evicted.
   setData(origin: string, size: number): boolean {
-    const data = this.map.get(origin)
+    // 若当前值大小大于容量
+    if (size > this.capacity) {
+      return false
+    }
 
-    if (data) {
-      data.lastUsed = Date.now()
-      data.size += size
-    } else {
-      const newData = {
-        origin,
-        lastUsed: Date.now(),
-        size,
-        persistent: false,
-      }
-      this.map.set(origin, newData)
+    // 是否存在该字段
+    const { size: curSize, persistent } =
+      this.map.get(origin) || ({} as OriginData)
 
+    this.totalSize = this.totalSize + size
+
+    // 若存在，且当前值小于塞入值
+    if (curSize && curSize <= size) {
+      // 当前的总量
+      this.totalSize = this.totalSize - curSize
+      this.map.delete(origin)
+      this.map.set(origin, { origin, size, persistent, lastUsed: Date.now() })
+
+      // 总量超出容量，进行删除
       while (this.totalSize > this.capacity) {
         const leastRecentlyUsed = this.findLeastRecentlyUsed()
 
@@ -75,11 +81,38 @@ class MyLRUStorage implements LRUStorage {
           this.map.delete(leastRecentlyUsed.origin)
           this.totalSize -= leastRecentlyUsed.size
         } else {
+          this.totalSize -= size
           return false
         }
       }
+      return true
+    } else if (curSize && curSize > size) {
+      // 当前的总量
+      this.totalSize = this.totalSize - curSize
+      this.map.delete(origin)
+      this.map.set(origin, { origin, size, persistent, lastUsed: Date.now() })
+      return true
     }
 
+    // 为新key
+    while (this.totalSize > this.capacity) {
+      const leastRecentlyUsed = this.findLeastRecentlyUsed()
+
+      if (leastRecentlyUsed) {
+        this.map.delete(leastRecentlyUsed.origin)
+        this.totalSize -= leastRecentlyUsed.size
+      } else {
+        this.totalSize -= size
+        return false
+      }
+    }
+
+    this.map.set(origin, {
+      origin,
+      size,
+      persistent: false,
+      lastUsed: Date.now(),
+    })
     return true
   }
 
@@ -108,7 +141,7 @@ class MyLRUStorage implements LRUStorage {
 
     for (let i = 0; i < [...this.map.values()].length; i++) {
       const data = [...this.map.values()][i]
-
+      // console.log('data.', data.origin, data.lastUsed)
       if (!data.persistent) {
         if (!leastRecentlyUsed) {
           leastRecentlyUsed = data
@@ -123,3 +156,101 @@ class MyLRUStorage implements LRUStorage {
     return leastRecentlyUsed
   }
 }
+
+const storage = new MyLRUStorage(10)
+
+storage.setData('a', 1)
+storage.setData('b', 3)
+storage.setData('c', 6)
+storage.setData('c', 1)
+console.log(storage.getData('a')?.size)
+console.log(storage.getData('b')?.size)
+console.log(storage.getData('c')?.size)
+// ----------------------------------------------------------------------------------
+
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.setData('c', 6)
+
+// console.log(storage.getData('a')?.size)
+// console.log(storage.getData('b')?.size)
+// console.log(storage.getData('c')?.size)
+
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.setData('c', 6)
+
+// console.log(storage.setData('a', 4)) // true
+
+// console.log(storage.getData('a')?.size) // 4
+
+// console.log(storage.getData('b')) // undefined
+
+// console.log(storage.getData('c')?.size) // 6
+
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.getData('a')
+// storage.setData('c', 7)
+
+// console.log(storage.getData('a')?.size)
+// console.log(storage.getData('b'))
+// console.log(storage.getData('c')?.size)
+
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.makePersistent('a')
+// storage.makePersistent('b')
+
+// console.log(storage.setData('c', 7)) // false
+
+// storage.clearData('b')
+// storage.setData('c', 7)
+
+// console.log(storage.getData('a')?.size) // 1
+
+// console.log(storage.getData('b')) // undefined
+// console.log(storage.getData('c')?.size) // 7
+
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.setData('c', 6)
+// storage.setData('c', 1)
+
+// console.log(storage.getData('a')?.size)
+// console.log(storage.getData('b')?.size)
+// console.log(storage.getData('c')?.size)
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// console.log('storage:', storage)
+// storage.setData('b', 3)
+// console.log('storage:', storage)
+// storage.setData('c', 7)
+// console.log('storage:', storage)
+
+// console.log('storage.getData(a):', storage.getData('a'))
+// console.log('storage.getData(b).size:', storage.getData('b')?.size)
+// console.log('storage.getData(c).size:', storage.getData('c')?.size)
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 2)
+// storage.setData('c', 3)
+// const ans = storage.setData('d', 11)
+// console.log('ans:', ans)
+// console.log('storage.getData(a).size):', storage.getData('a')?.size)
+// console.log('storage.getData(b).size):', storage.getData('b')?.size)
+// console.log('storage.getData(c).size):', storage.getData('c')?.size)
+// console.log('storage.getData(d).size):', storage.getData('d')?.size)
+// ----------------------------------------------------------------------------------
+// storage.setData('a', 1)
+// storage.setData('b', 3)
+// storage.getData('a')
+// storage.setData('c', 7)
+// console.log('storage.getData(a).size):', storage.getData('a')?.size)
+// console.log('storage.getData(b):', storage.getData('b'))
+// console.log('storage.getData(c).size):', storage.getData('c')?.size)
+// ----------------------------------------------------------------------------------
