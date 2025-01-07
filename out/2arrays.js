@@ -11,4 +11,5 @@ function getIntersection(arr1, arr2) {
     }
     return ans;
 }
+console.log('getIntersection:', getIntersection([1, 2, 3], [2, 3, 4, 5]));
 //# sourceMappingURL=2arrays.js.map
